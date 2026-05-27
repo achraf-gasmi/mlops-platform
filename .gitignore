@@ -1,0 +1,53 @@
+# Data — never push
+data/
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.egg
+*.egg-info/
+dist/
+build/
+.eggs/
+.venv/
+venv/
+env/
+
+# Models — too large for GitHub
+models/**/*.pkl
+models/**/*.pt
+models/**/*.h5
+models/**/*.joblib
+
+# MLflow
+mlruns/
+mlartifacts/
+*.db
+
+# Environment
+.env
+*.env
+
+# Jupyter
+.ipynb_checkpoints/
+*.ipynb
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Terraform
+terraform/.terraform/
+terraform/*.tfstate
+terraform/*.tfstate.backup
+terraform/.terraform.lock.hcl
+
+# Logs
+*.log
+logs/
+
+# Docker
+*.tar

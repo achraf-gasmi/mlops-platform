@@ -1,0 +1,114 @@
+version: "3.9"
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Picnic ML Platform — docker-compose
+#
+# Services:
+#   api       — FastAPI inference server (port 8000)
+#   mlflow    — Experiment tracking UI   (port 5000)
+#   monitoring — Prometheus metrics scrape target (future extension)
+# ─────────────────────────────────────────────────────────────────────────────
+
+services:
+
+  # ──────────────────────────────────────────────────────────────────────────
+  # FastAPI inference server
+  # ──────────────────────────────────────────────────────────────────────────
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: picnic-ml-api
+    ports:
+      - "8000:8000"
+    environment:
+      - MLFLOW_TRACKING_URI=http://mlflow:5000
+      - PYTHONPATH=/app
+    volumes:
+      # Mount model artifacts so they survive container rebuilds
+      - ./models:/app/models
+      - ./data:/app/data
+    depends_on:
+      mlflow:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  # ──────────────────────────────────────────────────────────────────────────
+  # MLflow experiment tracking
+  # ──────────────────────────────────────────────────────────────────────────
+  mlflow:
+    image: ghcr.io/mlflow/mlflow:v2.13.0
+    container_name: picnic-mlflow
+    ports:
+      - "5000:5000"
+    environment:
+      - MLFLOW_BACKEND_STORE_URI=sqlite:///mlflow/mlflow.db
+      - MLFLOW_DEFAULT_ARTIFACT_ROOT=/mlflow/artifacts
+    volumes:
+      - mlflow_data:/mlflow
+    command: >
+      mlflow server
+        --backend-store-uri sqlite:///mlflow/mlflow.db
+        --default-artifact-root /mlflow/artifacts
+        --host 0.0.0.0
+        --port 5000
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      interval: 20s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+
+  # ──────────────────────────────────────────────────────────────────────────
+  # Monitoring — lightweight Python metrics exporter
+  # Exposes /metrics in Prometheus text format for scraping.
+  # In production, wire this to a Prometheus + Grafana stack.
+  # ──────────────────────────────────────────────────────────────────────────
+  monitoring:
+    image: python:3.11-slim
+    container_name: picnic-monitoring
+    command: >
+      sh -c "pip install -q requests && python -c \"
+      import http.server, json, urllib.request, time
+
+      class Handler(http.server.BaseHTTPRequestHandler):
+          def do_GET(self):
+              if self.path == '/metrics':
+                  try:
+                      resp = urllib.request.urlopen('http://api:8000/metrics', timeout=5)
+                      data = json.loads(resp.read())
+                      body = json.dumps(data, indent=2).encode()
+                      self.send_response(200)
+                      self.send_header('Content-Type', 'application/json')
+                      self.end_headers()
+                      self.wfile.write(body)
+                  except Exception as e:
+                      self.send_response(503)
+                      self.end_headers()
+                      self.wfile.write(str(e).encode())
+              elif self.path == '/health':
+                  self.send_response(200); self.end_headers()
+                  self.wfile.write(b'ok')
+              else:
+                  self.send_response(404); self.end_headers()
+          def log_message(self, *a): pass
+
+      print('Monitoring proxy on :9090')
+      http.server.HTTPServer(('0.0.0.0', 9090), Handler).serve_forever()
+      \""
+    ports:
+      - "9090:9090"
+    depends_on:
+      - api
+    restart: unless-stopped
+
+volumes:
+  mlflow_data:
+    driver: local
