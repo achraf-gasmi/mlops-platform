@@ -1,6 +1,6 @@
-# Picnic ML Platform
+# Production MLOps Platform
 
-A production-grade machine learning platform that replicates the core ML use cases at [Picnic Technologies](https://picnic.app) — Europe's fastest-growing online grocery. Built as a platform engineering exercise: every model is wrapped with A/B testing, drift monitoring, FastAPI inference endpoints, MLflow experiment tracking, and Docker containerisation.
+A production-grade machine learning platform that serves four representative ML use cases behind a single inference API. Built as a platform-engineering exercise: every model is wrapped with A/B testing, drift monitoring, FastAPI inference endpoints, MLflow experiment tracking, and Docker containerisation — the operational layer that turns individual models into a maintainable production system.
 
 ---
 
@@ -50,6 +50,8 @@ A production-grade machine learning platform that replicates the core ML use cas
 ---
 
 ## ML Models
+
+The platform ships with four models spanning the most common production ML patterns — ranking, text classification, anomaly detection, and time-series forecasting — so the platform layer (serving, A/B testing, drift, monitoring) is exercised against genuinely different model types.
 
 ### 1. Recommendation System
 | | |
@@ -127,8 +129,8 @@ Each `train.py` logs parameters and metrics to MLflow automatically. View runs a
 ### Start all services
 
 ```bash
-git clone https://github.com/YOUR_ORG/picnic-ml-platform.git
-cd picnic-ml-platform
+git clone https://github.com/achraf-gasmi/mlops-platform.git
+cd mlops-platform
 
 # Train all models first (generates model.pkl files)
 pip install -r requirements.txt
@@ -240,7 +242,7 @@ Destroys cleanly with `terraform destroy`.
 ## Project Structure
 
 ```
-picnic-ml-platform/
+mlops-platform/
 ├── api/
 │   ├── main.py                  # FastAPI app, /health, /metrics
 │   └── routers/
